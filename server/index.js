@@ -4,9 +4,6 @@ import chalk from "chalk";
 
 // Import the routes
 import companyRoutes from "./routes/company.js";
-// import forgotPasswordRoute from "./routes/forgotPassword.js";
-// import movieRoutes from "./routes/movie.js";
-// import profileRoute from "./routes/profile.js";
 
 const port = process.env.APP_BACKEND_PORT || 8000;
 

@@ -1,6 +1,4 @@
-#  Dockerfile for Matcha Backend
-
-FROM node:12
+FROM node:16.3.0
 
 WORKDIR /server
 RUN chmod 777 /server
@@ -10,7 +8,6 @@ COPY package*.json ./
 
 RUN apt-get -y update
 RUN apt-get -y upgrade
-RUN apt-get install -y ffmpeg
 
 # Install Dependencies
 RUN npm install
@@ -27,10 +24,3 @@ EXPOSE 8000
 # Run server
 
 CMD ["npm", "run", "start"]
-
-
-# How to Build
-# docker build -t hypertube/server:1.0 .
-
-# How to run
-# docker run -p 8001:8000 --name hypertube_backend hypertube/server:1.0

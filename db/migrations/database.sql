@@ -4,56 +4,42 @@
 -- Install the uuid-ossp extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create the users table
-CREATE TABLE users (
-	user_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-	first_name VARCHAR(50) NOT NULL,
-	last_name VARCHAR(50) NOT NULL,
-	user_name VARCHAR(50) NOT NULL,
-	email VARCHAR(255) NOT NULL UNIQUE,
-	password VARCHAR(255),
-	token varchar(255) DEFAULT NULL,
-	movies_watched VARCHAR(255)[] DEFAULT '{}',
-	language VARCHAR(255) DEFAULT 'en',
-	verified SMALLINT NOT NULL DEFAULT 0,
-	avatar varchar(255) DEFAULT NULL
+-- create Company table
+CREATE TABLE Company (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  parent_id INTEGER REFERENCES Company(id)
 );
 
--- Create movie table
-CREATE TABLE movies (
-	id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-	imdb_code VARCHAR(50) NOT NULL UNIQUE,
-	title VARCHAR(255) NOT NULL,
-	last_watched timestamp DEFAULT NULL,
-	size INT DEFAULT 0,
-	server_location VARCHAR(255) DEFAULT NULL,
-	downloaded SMALLINT NOT NULL DEFAULT 0,
-	subtitle_paths VARCHAR(255)[] DEFAULT '{}',
-	magnet VARCHAR(255) DEFAULT NULL
+-- insert sample data into Company table
+INSERT INTO Company (name, parent_id)
+VALUES ('company 1', NULL),
+       ('company 2', 1),
+       ('company 3', 1);
+
+-- create StationType table
+CREATE TABLE StationType (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  maxPower INTEGER NOT NULL
 );
 
+-- insert sample data into StationType table
+INSERT INTO StationType (name, maxPower)
+VALUES ('Type 1', 10);
 
--- Create the comments table
-CREATE TABLE comments (
-	id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-	user_id uuid NOT NULL,
-	imdb_code VARCHAR(50) NOT NULL,
-	CONSTRAINT fk_user_id FOREIGN KEY(user_id) REFERENCES users(user_id),
-	CONSTRAINT fk_imdb_code FOREIGN KEY(imdb_code) REFERENCES movies(imdb_code),
-	comment_body VARCHAR(255) NOT NULL,
-	created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- create Station table
+CREATE TABLE Station (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  company_id INTEGER NOT NULL REFERENCES Company(id),
+  type_id INTEGER NOT NULL REFERENCES StationType(id)
 );
 
-/*
--- Insert predifined users for admin to use
-INSERT INTO users (first_name, last_name, user_name, email, verified, password)
-VALUES 
-('admin', 'user', 'admin', 'admin@gmail.com', '1', '$2a$10$PAM0GqbRGkOS2bVupYY0he23LiSv2THGyfvtULZpcdRTzSM7BQ01u'),
-('demo', 'user', 'demo', 'demo@gmail.com', '1', '$2a$10$PAM0GqbRGkOS2bVupYY0he23LiSv2THGyfvtULZpcdRTzSM7BQ01u');
-
--- Insert a test movie
-INSERT INTO movies (imdb_code, title) VALUES ('234324', 'Tiger')
-
--- Insert a test comment
-INSERT INTO comments (user_id, imdb_code, comment_body) VALUES ('b3e6c2dc-8d21-4f9c-9149-d89d2495afe8', '234324', 'this is a test comment')
-*/
+-- Insert sample data into Station table
+INSERT INTO Station (name, company_id, type_id)
+VALUES ('station 1', 3, 1),
+       ('station 2', 2, 1),
+       ('station 3', 2, 1),
+       ('station 4', 3, 1),
+       ('station 5', 1, 1);

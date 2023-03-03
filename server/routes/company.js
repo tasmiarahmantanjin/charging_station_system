@@ -5,18 +5,18 @@ const router = express.Router();
 
 // TODO: We have validation inside the controller function
 // API for getting all companies
-router.get("/", companyController.login);
+router.get("/", companyController.getCompanies);
 
 // API for creating a company
-router.post("/", companyController.login);
+router.post("/", companyController.createCompany);
 
 // API for getting a company by ID
-router.get("/:id", companyController.login);
+router.get("/:id", companyController.getCompany);
 
 // API for updating a company by ID
-router.put("/:id", companyController.login);
+router.put("/:id", companyController.updateCompany);
 
 // API for deleting a company by ID
-router.delete("/", companyController.login);
+router.delete("/", companyController.deleteCompany);
 
 export default router;
