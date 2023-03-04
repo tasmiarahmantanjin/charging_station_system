@@ -1,22 +1,54 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
+
+import validate from "../validators/index.js";
+import {
+  companyNameRules,
+  companyParamRules,
+} from "../validators/company/company.js";
+
 import companyController from "../controllers/company.js";
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+});
 
 const router = express.Router();
 
-// TODO: We have validation inside the controller function
-// API for getting all companies
-router.get("/", companyController.getCompanies);
+// Getting companies
+router.get("/", apiLimiter, [validate], companyController.getCompanies);
 
-// API for creating a company
-router.post("/", companyController.createCompany);
+// Creating a company
+router.post(
+  "/",
+  apiLimiter,
+  [validate, companyNameRules],
+  companyController.createCompany
+);
 
-// API for getting a company by ID
-router.get("/:id", companyController.getCompany);
+// Getting a company by ID
+router.get(
+  "/:id",
+  apiLimiter,
+  [validate, companyParamRules],
+  companyController.getCompany
+);
 
-// API for updating a company by ID
-router.put("/:id", companyController.updateCompany);
+// Updating a company by ID
+router.put(
+  "/:id",
+  apiLimiter,
+  [validate, companyParamRules],
+  companyController.updateCompany
+);
 
-// API for deleting a company by ID
-router.delete("/", companyController.deleteCompany);
+// Deleting a company by ID
+router.delete(
+  "/:id",
+  apiLimiter,
+  [validate, companyParamRules],
+  companyController.deleteCompany
+);
 
 export default router;

@@ -1,105 +1,130 @@
+// Import database connection pool
 import pool from "../config/database.js";
-import jwt from "jsonwebtoken";
-import * as bcrypt from "bcrypt";
-import crypto from "crypto";
 
-const findUserInfoFromDB = async (key, value, ...args) => {
-  const info = args.length == 0 ? "*" : args.join(", ");
-  const res = await pool.query(`SELECT ${info} FROM users WHERE ${key} = $1`, [
-    value,
-  ]);
-  return res.rows[0];
-};
-
-// @route   POST /getCompanies
+// @route   POST /companies
 // @desc    Get all companies
-// @access  Public
 const getCompanies = async (req, res) => {
   try {
-    const result = await dbClient.query("SELECT * FROM companies");
-    res.send(result.rows);
+    // Get limit from client input, default to 100
+    const limit = parseInt(req.query.limit) || 100;
+
+    const query = {
+      text: "SELECT * FROM company LIMIT $1",
+      values: [limit],
+    };
+
+    const result = await pool.query(query);
+
+    res.status(200).json({ success: true, data: result.rows });
   } catch (err) {
     console.error(err);
     res.status(500).send("Error retrieving companies from database.");
   }
 };
 
-// @route   POST /createCompany
+// @route   POST /companies
 // @desc    Create new company
-// @access  Public
 const createCompany = async (req, res) => {
   const { name } = req.body;
 
   try {
-    const newCompany = await pool.query(
-      "INSERT INTO companies (name) VALUES ($1) RETURNING *",
-      [name]
-    );
-    res.status(201).json(newCompany.rows[0]);
+    const query = {
+      text: "INSERT INTO company (name) VALUES ($1) RETURNING *",
+      values: [name],
+    };
+
+    const result = await pool.query(query);
+
+    res.status(200).json({ success: true, data: result.rows[0] });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error while trying to create company",
+    });
   }
 };
 
-// @route   GET /getCompany
+// @route   GET /companies/:id
 // @desc    Get company by ID
-// @access  Public
 const getCompany = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await dbClient.query("SELECT * FROM companies WHERE id=$1", [
-      id,
-    ]);
+    const query = {
+      text: "SELECT * FROM company WHERE id=$1",
+      values: [id],
+    };
+
+    const result = await pool.query(query);
+
     if (result.rows.length > 0) {
-      res.status(200).json(result.rows[0]);
+      res.status(200).json({ success: true, data: result.rows[0] });
     } else {
-      res.status(404).send(`Company with ID ${id} not found.`);
+      res
+        .status(404)
+        .json({ success: false, message: `Company with ID ${id} not found.` });
     }
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .send(`Error retrieving company with ID ${id} from database.`);
+    res.status(500).json({
+      success: false,
+      message: `Server error while retrieving company with ID ${id} from database: ${err.message}`,
+    });
   }
 };
 
-// @route   PUT /updateCompany
+// @route   PUT /companies/:id
 // @desc    Update company by ID
-// @access  Public
 const updateCompany = async (req, res) => {
-  const {
-    body: { name },
-    params: { id },
-  } = req;
-
   try {
-    const result = await dbClient.query(
-      "UPDATE companies SET name=$1 WHERE id=$2 RETURNING *",
-      [name, id]
-    );
+    const {
+      body: { name },
+      params: { id },
+    } = req;
+
+    if (!name) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Name is required" });
+    }
+
+    const query = {
+      text: "UPDATE company SET name=$1 WHERE id=$2 RETURNING *",
+      values: [name, id],
+    };
+
+    const result = await pool.query(query);
+
     if (result.rows.length > 0) {
-      res.status(200).json(result.rows[0]);
+      res.status(200).json({ success: true, data: result.rows[0] });
     } else {
-      res.status(404).send(`Company with ID ${id} not found.`);
+      res
+        .status(404)
+        .json({ success: false, message: `Company with ID ${id} not found.` });
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send(`Error updating company with ID ${id} in database.`);
+    res.status(500).json({
+      success: false,
+      message: `Sever error while trying to update company with ID ${id} in database: ${err.message}`,
+    });
   }
 };
 
-// @route   GET /deleteCompany
+// @route   GET /companies/:id
 // @desc    Delete company by ID
-// @access  Public
 const deleteCompany = async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
+
   try {
-    const result = await dbClient.query(
-      "DELETE FROM companies WHERE id=$1 RETURNING *",
-      [id]
-    );
+    const query = {
+      text: "DELETE FROM company WHERE id=$1 RETURNING *",
+      values: [id],
+    };
+
+    const result = await pool.query(query);
+
     if (result.rows.length > 0) {
       res
         .status(200)
@@ -111,7 +136,10 @@ const deleteCompany = async (req, res) => {
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send(`Error deleting company with ID ${id} from database.`);
+    res.status(500).json({
+      success: false,
+      message: `Server error while trying to delete company with ID ${id} from database: ${err.message}`,
+    });
   }
 };
 
