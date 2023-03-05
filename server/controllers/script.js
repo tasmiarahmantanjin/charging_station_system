@@ -308,8 +308,8 @@ const script = async (req, res) => {
         } else {
           const station = await startChargingStationById(stationId);
 
-          if (!chargingStations.includes(stationId)) {
-            chargingStations.push(stationId);
+          if (!chargingStations.includes(parseInt(stationId))) {
+            chargingStations.push(parseInt(stationId));
           }
           chargingPower += station.type[0].maxpower;
         }
@@ -323,8 +323,10 @@ const script = async (req, res) => {
         } else {
           const station = await stopChargingStationById(stationId);
 
-          // Remove the items from chargingStations array where value is equal to stationId
-          chargingStations = chargingStations.filter((id) => id !== stationId);
+          chargingStations = chargingStations.filter(
+            (id) => id !== parseInt(stationId)
+          );
+
           chargingPower -= station.type[0].maxpower;
         }
       } else if (command.startsWith("Wait")) {
