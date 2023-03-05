@@ -4,6 +4,8 @@ import chalk from "chalk";
 
 // Import the routes
 import companyRoutes from "./routes/company.js";
+import stationRoutes from "./routes/station.js";
+import stationTypesRoutes from "./routes/stationTypes.js";
 
 const port = process.env.APP_BACKEND_PORT || 8000;
 
@@ -19,6 +21,8 @@ app.use(express.json());
 
 // Use imported routes
 app.use("/companies", companyRoutes);
+app.use("/stations", stationRoutes);
+app.use("/stationTypes", stationTypesRoutes);
 
 app.listen(port, () => {
   console.info(
