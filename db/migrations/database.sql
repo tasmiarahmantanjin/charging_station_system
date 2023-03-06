@@ -26,6 +26,7 @@ CREATE TABLE Station (
   type_id INTEGER NOT NULL REFERENCES StationType(id)
 );
 
+-- ALTER TABLE chargingactivity ADD CONSTRAINT chargingactivity_station_id_key UNIQUE (station_id);
 -- Create ChargingState table
 CREATE TABLE ChargingState (
   id SERIAL PRIMARY KEY,
@@ -38,10 +39,12 @@ CREATE TABLE ChargingState (
 CREATE TABLE ChargingActivity (
   id SERIAL PRIMARY KEY,
   station_id INTEGER NOT NULL REFERENCES Station(id),
-  --- startTimestamp (timestamp) - indicates when the charging activity started
+  company_id INTEGER NOT NULL REFERENCES Company(id),
+  --- Also add the parent_id of the company which we can get the company tables parent_id
+  company_parent_id INTEGER REFERENCES Company(id),
   startTimestamp TIMESTAMP NOT NULL,
-  --- ndicates when the charging activity ended (null if charging is still ongoing)
   endTimestamp TIMESTAMP,
+  isCharging BOOLEAN NOT NULL DEFAULT FALSE,
   chargingPower INTEGER NOT NULL
 );
 

@@ -1,19 +1,26 @@
 // Import database connection pool
 import pool from "../config/database.js";
 
+// const exampleScript = `
+// Begin
+// Start station 1
+// Wait 5
+// Start station 2
+// Wait 10
+// Start station all
+// Wait 10
+// Stop station 2
+// Wait 10
+// Stop station 3
+// Wait 5
+// Stop station all
+// End
+// `;
+
 const exampleScript = `
 Begin
-Start station 1
-Wait 5
 Start station 2
 Wait 10
-Start station all
-Wait 10
-Stop station 2
-Wait 10
-Stop station 3
-Wait 5
-Stop station all
 End
 `;
 
@@ -98,6 +105,7 @@ const exampleResponseData = [
 const START_COMMAND = "Start station";
 const STOP_COMMAND = "Stop station";
 const ALL_STATIONS = "all";
+const WAIT_COMMAND = "Wait";
 
 // Helper functions
 const getStationsAndItsCompany = async () => {
@@ -118,15 +126,63 @@ const getStationsAndItsCompany = async () => {
         )
     ) AS company
   FROM station s
-  INNER JOIN company c ON s.company_id = c.id
-  INNER JOIN stationType st ON s.type_id = st.id
-  INNER JOIN chargingstate cs ON s.id = cs.station_id
+  LEFT JOIN company c ON s.company_id = c.id
+  LEFT JOIN stationType st ON s.type_id = st.id
+  LEFT JOIN chargingstate cs ON s.id = cs.station_id
   GROUP BY s.id, s.name, s.company_id, s.type_id, st.name, st.maxpower, cs.charging
   ORDER BY s.id;`;
 
   try {
     const result = await pool.query(query);
     return result.rows;
+  } catch (error) {
+    console.error(error);
+  }
+};
+// TODO: Change the name --- getStationAndAssociationsByStationId
+const getStationById = async (stationId) => {
+  try {
+    const station = await pool.query(
+      `SELECT
+  s.id,
+  s.name,
+  s.company_id,
+  s.type_id,
+  st.name AS station_type,
+  st.maxpower AS maxpower,
+  cs.charging AS isCharging,
+  json_agg(
+    json_build_object(
+      'id', st.id,
+      'name', st.name,
+      'maxpower', st.maxpower
+    )
+  ) AS type,
+  json_agg(
+    json_build_object(
+      'id', c.id,
+      'name', c.name,
+      'parentCompanyId', c.parent_id
+    )
+  ) AS company,
+  json_agg(
+    json_build_object(
+      'id', cs.id,
+      'station_id', cs.station_id,
+      'ischarging', cs.charging
+    )
+  ) AS chargingstate
+  FROM station s
+  LEFT JOIN stationtype st ON s.type_id = st.id
+  LEFT JOIN company c ON s.company_id = c.id
+  LEFT JOIN chargingstate cs ON s.id = cs.station_id
+  WHERE s.id = $1
+  GROUP BY s.id, s.name, s.company_id, st.name, st.maxpower, cs.charging
+  ORDER BY s.id;`,
+      [stationId]
+    );
+
+    return station.rows[0];
   } catch (error) {
     console.error(error);
   }
@@ -155,35 +211,92 @@ const groupStationsByCompany = (stations) => {
 };
 
 // Helper function to calculate charging state data
-const calculateChargingStateData = async () => {
+const calculateChargingStateData = async (stationId = ALL_STATIONS) => {
   // Get all stations from database
-  const stations = await getStationsAndItsCompany();
+  // const stations = await getStationsAndItsCompany();
+  let stations;
+
+  if (stationId === ALL_STATIONS) {
+    // Get all stations from database
+    stations = await getStationsAndItsCompany();
+  } else {
+    // Get specific station from database
+    const station = await getStationById(stationId);
+    if (!station) {
+      throw new Error(`Station with id ${stationId} not found`);
+    }
+    stations = [station];
+  }
 
   // Group stations by company
   const stationsByCompany = groupStationsByCompany(stations);
 
   // Calculate charging state for each company
-  const companiesChargingState = stationsByCompany.map((company) => {
-    const { id, stations } = company;
+  // const companiesChargingState = stationsByCompany.map((company) => {
+  //   const { id, stations, parentCompanyId } = company;
+
+  //   const chargingStations = stations.filter((station) => station.ischarging);
+
+  //   const chargingPower = chargingStations.reduce((totalPower, station) => {
+  //     return totalPower + station.maxpower;
+  //   }, 0);
+
+  //   // if parentCompanyId is present then attach the same data
+  //   let parentCompanyChargingState = {};
+  //   if (parentCompanyId) {
+  //     // TODO: make it dynamic, now it works only for one station
+  //     parentCompanyChargingState.id = stations[0].id;
+  //     parentCompanyChargingState.chargingStations = chargingStations.map(
+  //       (station) => station.id
+  //     );
+  //     parentCompanyChargingState.chargingPower = chargingPower;
+  //   }
+  //   console.log("parentCompany", parentCompanyChargingState);
+
+  //   // Calculate total power for each company
+
+  //   return {
+  //     id,
+  //     chargingStations: chargingStations.map((station) => station.id),
+  //     chargingPower,
+  //     parentCompanyChargingState,
+  //   };
+  // });
+
+  const companiesChargingState = stationsByCompany.flatMap((company) => {
+    const { id, stations, parentCompanyId } = company;
 
     const chargingStations = stations.filter((station) => station.ischarging);
 
-    const chargingPower = chargingStations.reduce((totalPower, station) => {
-      return totalPower + station.maxpower;
-    }, 0);
+    const chargingPower = chargingStations.reduce(
+      (totalPower, station) => totalPower + station.maxpower,
+      0
+    );
 
-    return {
+    let companyData = {
       id,
       chargingStations: chargingStations.map((station) => station.id),
       chargingPower,
     };
+
+    if (parentCompanyId) {
+      let parentCompanyData = {
+        id: parentCompanyId,
+        chargingStations: chargingStations.map((station) => station.id),
+        chargingPower,
+      };
+
+      return [companyData, parentCompanyData];
+    } else {
+      return [companyData];
+    }
   });
 
   const allStationsChargingState = stations.reduce(
     (state, station) => {
-      if (station.isCharging) {
+      if (station.ischarging) {
         state.chargingStations.push(station.id);
-        state.chargingPower += station.maxPower;
+        state.chargingPower += station.maxpower;
       }
 
       return state;
@@ -193,7 +306,9 @@ const calculateChargingStateData = async () => {
 
   // Return the charging state data
   return {
-    companiesChargingState,
+    companiesChargingState: companiesChargingState.sort((a, b) =>
+      a.id > b.id ? 1 : -1
+    ),
     allStationsChargingState,
   };
 };
@@ -226,46 +341,82 @@ const getAllStations = async () => {
 const startChargingAllStations = async () => {
   const stations = await getAllStations();
 
+  const query = `INSERT INTO ChargingState (station_id, charging) VALUES ($1, $2) ON CONFLICT (station_id) DO UPDATE SET charging = $2;`;
+  const updateActivityForAllStationQuery = `
+  INSERT INTO chargingactivity (station_id, company_id, company_parent_id, starttimestamp, ischarging, chargingpower)
+  SELECT $1, $2, COALESCE(c.parent_id, null), $3, $4, $5
+  FROM company c
+  WHERE c.id = $2;
+`;
+
+  const promises01 = stations.map((station) => {
+    return pool.query(query, [station.id, true]);
+  });
+
+  const promises02 = stations.map((station) => {
+    {
+      return pool.query(updateActivityForAllStationQuery, [
+        station.id,
+        station.company_id,
+        new Date(),
+        true,
+        10,
+      ]);
+    }
+  });
+
+  await Promise.all(promises01);
+  await Promise.all(promises02);
+
   return stations;
-};
-
-const getStationById = async (stationId) => {
-  try {
-    const station = await pool.query(
-      `SELECT
-      s.id,
-      s.name,
-      s.company_id,
-      s.type_id,
-        json_agg(
-          json_build_object(
-            'id', st.id,
-            'name', st.name,
-            'maxpower', st.maxpower
-          )
-        ) AS type
-        FROM station s
-        INNER JOIN stationtype st ON s.type_id = st.id
-        WHERE s.id = $1
-        GROUP BY s.id, s.name, s.company_id, s.type_id
-        ORDER BY s.id;`,
-      [stationId]
-    );
-
-    return station.rows[0];
-  } catch (error) {
-    console.error(error);
-  }
 };
 
 const startChargingStationById = async (stationId) => {
   const station = await getStationById(stationId);
 
+  const query = `INSERT INTO ChargingState (station_id, charging) VALUES ($1, $2) ON CONFLICT (station_id) DO UPDATE SET charging = $2;`;
+  const queryValues = [station.id, true];
+
+  const createQuery = `INSERT INTO chargingactivity (station_id, company_id, company_parent_id, starttimestamp, chargingpower, ischarging)
+  VALUES ($1, $2, COALESCE((SELECT parent_id FROM company WHERE id = $2), NULL), $3, $4, $5) RETURNING *;`;
+
+  const createQueryValues = [
+    station.id,
+    station.company_id,
+    new Date(),
+    10,
+    true,
+  ];
+
+  await pool.query(createQuery, createQueryValues);
+  await pool.query(query, queryValues);
+
   return station;
+};
+
+const stopChargingAllStations = async () => {
+  const query = `UPDATE ChargingState SET charging = FALSE;`;
+  await pool.query(query);
+
+  const updateQuery =
+    "UPDATE chargingactivity SET isCharging = $1, endtimestamp = $2 WHERE isCharging = $3";
+  const values = [false, new Date(), true];
+
+  await pool.query(updateQuery, values);
 };
 
 const stopChargingStationById = async (stationId) => {
   const station = await getStationById(stationId);
+
+  const query = `UPDATE chargingactivity SET isCharging = $1, endtimestamp = $2 WHERE station_id = $3 AND isCharging = $4;`;
+  const values = [false, new Date(), stationId, true];
+
+  // Also, update the ChargingState table by id
+  const updateQuery = `UPDATE ChargingState SET charging = $1 WHERE station_id = $2;`;
+  const updateValues = [false, stationId];
+
+  await pool.query(query, values);
+  await pool.query(updateQuery, updateValues);
 
   return station;
 };
@@ -291,11 +442,12 @@ const script = async (req, res) => {
     const chargingStateData = [];
     let chargingStations = [];
     let chargingPower = 0;
+    let companiesData = [];
 
     for (let i = 0; i < commands.length; i++) {
       const command = commands[i].trim();
 
-      if (command.startsWith("Start station")) {
+      if (command.startsWith(START_COMMAND)) {
         const stationId = command.split(" ")[2];
 
         if (stationId === ALL_STATIONS) {
@@ -308,18 +460,46 @@ const script = async (req, res) => {
         } else {
           const station = await startChargingStationById(stationId);
 
+          const chargingStateData = await calculateChargingStateData(stationId);
+
+          const companiesChargingStateData =
+            chargingStateData.companiesChargingState;
+
+          // Push companiesChargingStateData to companyData array
+          // companiesData.push(companiesChargingStateData);
+
+          // Check on every iteration if there is something inside companiesChargingStateData already
+          // If the value exists already, replace it or add it as a second object
+          if (companiesData.length > 0) {
+            const companyIndex = companiesData.findIndex(
+              (company) => company.id === companiesChargingStateData.id
+            );
+            if (companyIndex > -1) {
+              companiesData[companyIndex] = companiesChargingStateData;
+            } else {
+              companiesData.push(companiesChargingStateData);
+            }
+          } else {
+            companiesData.push(companiesChargingStateData);
+          }
+
           if (!chargingStations.includes(parseInt(stationId))) {
             chargingStations.push(parseInt(stationId));
           }
           chargingPower += station.type[0].maxpower;
         }
-      } else if (command.startsWith("Stop station")) {
+      } else if (command.startsWith(STOP_COMMAND)) {
         const stationId = command.split(" ")[2];
 
         // Stop charging all stations
         if (stationId === ALL_STATIONS) {
+          // TODO: Update charging state data to get correct output
+          // from calculateChargingStateData function
+          await stopChargingAllStations();
           chargingStations = [];
           chargingPower = 0;
+
+          // Update charging state data
         } else {
           const station = await stopChargingStationById(stationId);
 
@@ -329,12 +509,12 @@ const script = async (req, res) => {
 
           chargingPower -= station.type[0].maxpower;
         }
-      } else if (command.startsWith("Wait")) {
+      } else if (command.startsWith(WAIT_COMMAND)) {
         // Wait step is ignored, continue with the next step
         continue;
       }
 
-      if (command === "Begin") {
+      if (command === "Begin" || command === "End") {
         const stepData = {
           step: command,
           timestamp: new Date().getTime(),
@@ -347,11 +527,16 @@ const script = async (req, res) => {
         continue;
       }
 
+      // const newData = await calculateChargingStateData();
+
       const stepData = {
         step: command,
         timestamp: new Date().getTime(),
-        companies: await calculateChargingStateData(),
+        companies: companiesData,
+        // companies: await calculateChargingStateData("all"),
         totalChargingStations: chargingStations,
+        // totalChargingStations:
+        //   newData.allStationsChargingState.chargingStations,
         totalChargingPower: chargingPower,
       };
 
