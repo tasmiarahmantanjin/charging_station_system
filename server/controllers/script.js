@@ -444,6 +444,8 @@ const script = async (req, res) => {
     let chargingPower = 0;
     let companiesData = [];
 
+    let tasmia;
+
     for (let i = 0; i < commands.length; i++) {
       const command = commands[i].trim();
 
@@ -459,6 +461,34 @@ const script = async (req, res) => {
           }, 0);
         } else {
           const station = await startChargingStationById(stationId);
+
+          // From chargingactivity get all the company carging status based on stationId
+
+          const query = `SELECT json_build_object(
+                'step', 'Start station 1',
+                'timestamp', '1678028342822',
+                'companies', (
+                    SELECT json_agg(company_data)
+                    FROM (
+                        SELECT c.id,
+                            ARRAY(SELECT DISTINCT station_id FROM chargingactivity WHERE company_id = c.id) AS chargingStations,
+                            SUM(ca.chargingpower) AS chargingPower
+                        FROM chargingactivity ca
+                        INNER JOIN company c ON ca.company_id = c.id
+                        WHERE ca.station_id = 1
+                        GROUP BY c.id
+                    ) company_data
+                ),
+                'totalChargingStations', ARRAY(SELECT DISTINCT station_id FROM chargingactivity WHERE station_id = 1),
+                'totalChargingPower', (
+                    SELECT SUM(chargingpower)
+                    FROM chargingactivity
+                    WHERE station_id = 1
+                )
+            );`;
+
+          const tas = await pool.query(query);
+          tasmia = tas.rows;
 
           const chargingStateData = await calculateChargingStateData(stationId);
 
@@ -543,7 +573,7 @@ const script = async (req, res) => {
       chargingStateData.push(stepData);
     }
 
-    res.json({ data: chargingStateData });
+    res.json({ data: chargingStateData, tasmia });
   } catch (error) {
     console.error(error);
     res.status(500).json({
