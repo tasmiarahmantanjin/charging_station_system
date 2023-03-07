@@ -8,96 +8,6 @@ import {
   stopChargingStationById,
 } from "../utils/helper/script.js";
 
-const exampleScript = `
-Begin
-Start station 1
-Wait 5
-Start station 2
-Wait 10
-Start station all
-Wait 10
-Stop station 2
-Wait 10
-Stop station all
-End
-`;
-const exampleResponseData = [
-  {
-    step: "Begin",
-    timestamp: "1678028342822",
-    companies: [],
-    totalChargingStations: [],
-    totalChargingPower: 0,
-  },
-  {
-    step: "Start station 1",
-    timestamp: "1678028342822",
-    companies: [
-      {
-        id: 1,
-        chargingStations: [1],
-        chargingPower: 10,
-      },
-      {
-        id: 3,
-        chargingStations: [1],
-        chargingPower: 10,
-      },
-    ],
-    totalChargingStations: [1],
-    totalChargingPower: 10,
-  },
-  {
-    step: "Start station 2",
-    // timestamp: <unix-timestamp-of-step-3 = timestamp-of-step-2 + 5seconds>,
-    timestamp: "1678018275527",
-    companies: [
-      {
-        id: 1,
-        chargingStations: [1, 2],
-        chargingPower: 20,
-      },
-      {
-        id: 2,
-        chargingStations: [2],
-        chargingPower: 10,
-      },
-      {
-        id: 3,
-        chargingStations: [1],
-        chargingPower: 10,
-      },
-    ],
-    totalChargingStations: [1, 2],
-    totalChargingPower: 20,
-  },
-  {
-    step: "Start station all",
-    // timestamp: <unix-timestamp-of-step-4 = timestamp-of-step-3 + 10seconds>,
-    timestamp: "1678018275527",
-    companies: [
-      {
-        id: 1,
-        chargingStations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        chargingPower: 100,
-      },
-      {
-        id: 2,
-        chargingStations: [2, 3, 4, 5, 6, 7, 8, 9, 10],
-        chargingPower: 90,
-      },
-      {
-        id: 3,
-        chargingStations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        chargingPower: 100,
-      },
-    ],
-    totalChargingStations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    totalChargingPower: 100,
-  },
-  // Continue ...
-];
-
 // Constants
 const START_COMMAND = "Start station";
 const STOP_COMMAND = "Stop station";
@@ -107,11 +17,11 @@ const WAIT_COMMAND = "Wait";
 // @route   POST /script-parser
 const script = async (req, res) => {
   try {
-    // const script = req.body.script;
+    const { script: inputScript } = req.body;
 
     const isValidScript =
-      exampleScript.trim().startsWith("Begin") &&
-      exampleScript.trim().endsWith("End");
+      inputScript.trim().startsWith("Begin") &&
+      inputScript.trim().endsWith("End");
 
     if (!isValidScript) {
       return res.status(400).json({
@@ -120,7 +30,7 @@ const script = async (req, res) => {
       });
     }
 
-    const commands = exampleScript.split("\n").filter(Boolean);
+    const commands = inputScript.split("\n").filter(Boolean);
 
     const chargingStateData = [];
     let chargingStations = [];
@@ -151,9 +61,7 @@ const script = async (req, res) => {
           companiesData = chargingStateData.companies;
           chargingStations = chargingStateData.totalChargingStations;
 
-          // TODO: Investigate why this is not working properly and fix it
           chargingPower = chargingStateData.totalChargingPower;
-          // chargingPower += station.type[0].maxpower;
         }
       } else if (command.startsWith(STOP_COMMAND)) {
         const stationId = command.split(" ")[2];
@@ -170,10 +78,7 @@ const script = async (req, res) => {
 
           companiesData = chargingStateData.companies;
           chargingStations = chargingStateData.totalChargingStations;
-
-          // TODO: Investigate why this is not working properly and fix it
           chargingPower = chargingStateData.totalChargingPower;
-          // chargingPower -= station.type[0].maxpower;
         }
       } else if (command.startsWith(WAIT_COMMAND)) {
         const waitingTimeInSec = command.split(" ")[1];
@@ -205,8 +110,6 @@ const script = async (req, res) => {
         chargingStateData.push(stepData);
         continue;
       }
-
-      // const currentTime = new Date().getTime();
 
       let timestampBasedOnStep;
       if (i === 1) {
