@@ -3,8 +3,8 @@ import rateLimit from "express-rate-limit";
 
 import validate from "../validators/index.js";
 import {
-  companyNameRules,
-  companyParamRules,
+  nameValidationRules,
+  idValidationRules,
 } from "../validators/company/company.js";
 
 import companyController from "../controllers/company.js";
@@ -23,7 +23,7 @@ router.get("/", apiLimiter, [validate], companyController.getCompanies);
 router.post(
   "/",
   apiLimiter,
-  [validate, companyNameRules],
+  [validate, nameValidationRules],
   companyController.createCompany
 );
 
@@ -31,7 +31,7 @@ router.post(
 router.get(
   "/:id",
   apiLimiter,
-  [validate, companyParamRules],
+  [validate, idValidationRules],
   companyController.getCompany
 );
 
@@ -39,7 +39,7 @@ router.get(
 router.put(
   "/:id",
   apiLimiter,
-  [validate, companyParamRules],
+  [validate, idValidationRules],
   companyController.updateCompany
 );
 
@@ -47,7 +47,7 @@ router.put(
 router.delete(
   "/:id",
   apiLimiter,
-  [validate, companyParamRules],
+  [validate, idValidationRules],
   companyController.deleteCompany
 );
 

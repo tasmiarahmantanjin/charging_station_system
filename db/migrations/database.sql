@@ -1,5 +1,5 @@
 -- Create the database
--- CREATE DATABASE charging_station_system;
+CREATE DATABASE charging_station_system;
 
 -- Create Company table
 CREATE TABLE IF NOT EXISTS Company (

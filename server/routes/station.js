@@ -3,20 +3,11 @@ import rateLimit from "express-rate-limit";
 
 import validate from "../validators/index.js";
 import {
-  companyNameRules,
-  companyParamRules,
+  nameValidationRules,
+  idValidationRules,
 } from "../validators/company/company.js";
 
 import stationController from "../controllers/station.js";
-
-/*
-Stations API
-GET /stations: Get a list of all stations
-GET /stations/:id: Get a single station by id
-POST /stations: Create a new station
-PUT /stations/:id: Update an existing station by id
-DELETE /stations/:id: Delete a station by id
-*/
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -32,7 +23,7 @@ router.get("/", apiLimiter, [validate], stationController.getStations);
 router.post(
   "/",
   apiLimiter,
-  [validate, companyNameRules],
+  [validate, nameValidationRules],
   stationController.createStation
 );
 
@@ -40,7 +31,7 @@ router.post(
 router.get(
   "/:id",
   apiLimiter,
-  [validate, companyParamRules],
+  [validate, idValidationRules],
   stationController.getStation
 );
 
@@ -48,7 +39,7 @@ router.get(
 router.put(
   "/:id",
   apiLimiter,
-  [validate, companyParamRules],
+  [validate, idValidationRules],
   stationController.updateStation
 );
 
@@ -56,7 +47,7 @@ router.put(
 router.delete(
   "/:id",
   apiLimiter,
-  [validate, companyParamRules],
+  [validate, idValidationRules],
   stationController.deleteStation
 );
 

@@ -3,20 +3,11 @@ import rateLimit from "express-rate-limit";
 
 import validate from "../validators/index.js";
 import {
-  companyNameRules,
-  companyParamRules,
+  nameValidationRules,
+  idValidationRules,
 } from "../validators/company/company.js";
 
 import stationTypesController from "../controllers/stationTypes.js";
-
-/**
- * Station Types API
- * GET /stationTypes: Get a list of all station types
- * GET /stationType/:id: Get a single station type by id
- * POST /stationType: Create a new station type
- * PUT /stationType/:id: Update an existing station type by id
- * DELETE /stationType/:id: Delete a station type by id
- */
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -32,7 +23,7 @@ router.get("/", apiLimiter, [validate], stationTypesController.getStationTypes);
 router.post(
   "/",
   apiLimiter,
-  [validate, companyNameRules],
+  [validate, nameValidationRules],
   stationTypesController.createStationType
 );
 
@@ -40,7 +31,7 @@ router.post(
 router.get(
   "/:id",
   apiLimiter,
-  [validate, companyParamRules],
+  [validate, idValidationRules],
   stationTypesController.getStationType
 );
 
@@ -48,7 +39,7 @@ router.get(
 router.put(
   "/:id",
   apiLimiter,
-  [validate, companyParamRules],
+  [validate, idValidationRules],
   stationTypesController.updateStationType
 );
 
@@ -56,7 +47,7 @@ router.put(
 router.delete(
   "/:id",
   apiLimiter,
-  [validate, companyParamRules],
+  [validate, idValidationRules],
   stationTypesController.deleteStationType
 );
 

@@ -7,6 +7,7 @@ import companyRoutes from "./routes/company.js";
 import stationRoutes from "./routes/station.js";
 import stationTypesRoutes from "./routes/stationTypes.js";
 import script from "./routes/script.js";
+import childCompaniesRoutes from "./routes/childCompanies.js";
 
 const port = process.env.APP_BACKEND_PORT || 8000;
 
@@ -24,6 +25,7 @@ app.use(express.json());
 app.use("/companies", companyRoutes);
 app.use("/stations", stationRoutes);
 app.use("/stationTypes", stationTypesRoutes);
+app.use("/child-companies", childCompaniesRoutes);
 app.use("/script-parser", script);
 
 app.listen(port, () => {

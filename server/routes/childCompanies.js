@@ -6,13 +6,19 @@ const apiLimiter = rateLimit({
   max: 100, // Limit each IP to 100 requests per windowMs
 });
 
+import childCompanyController from "../controllers/childCompanies.js";
 import validate from "../validators/index.js";
 
-import scriptsController from "../controllers/script.js";
+import { idValidationRules } from "../validators/company/company.js";
 
 const router = express.Router();
 
 // Route for parsing the script
-router.post("/", apiLimiter, [validate], scriptsController.script);
+router.get(
+  "/:id",
+  apiLimiter,
+  [validate, idValidationRules],
+  childCompanyController.getCompanyAndAssociations
+);
 
 export default router;

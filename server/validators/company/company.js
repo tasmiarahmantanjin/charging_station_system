@@ -1,6 +1,6 @@
 import { body, param } from "express-validator";
 
-const companyNameRules = (() => {
+const nameValidationRules = (() => {
   return [
     body("name")
       .isString()
@@ -10,8 +10,8 @@ const companyNameRules = (() => {
   ];
 })();
 
-const companyParamRules = (() => {
+const idValidationRules = (() => {
   return [param("id").isInt().withMessage("ID must be an integer").toInt()];
 })();
 
-export { companyNameRules, companyParamRules };
+export { nameValidationRules, idValidationRules };
