@@ -14,6 +14,8 @@ Before you can run the project, you will need to have the following software ins
 ```
 git clone https://github.com/tasmiarahmantanjin/charging_station_system
 cd charging_station_system
+cd server
+npm install
 docker-compose up
 ```
 
