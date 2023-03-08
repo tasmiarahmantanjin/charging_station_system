@@ -52,43 +52,48 @@ export const getStationAndAssociationsByStationId = async (stationId) => {
 // Helper function to calculate charging state data
 export const calculateChargingStateData = async () => {
   try {
-    const query = `SELECT
-              company.id,
-              ARRAY_AGG(DISTINCT chargingactivity.station_id) AS chargingstations,
-              SUM(DISTINCT chargingactivity.chargingpower) AS chargingpower
-          FROM
-              company
-              JOIN chargingactivity ON chargingactivity.company_id = company.id
-          WHERE
-              chargingactivity.ischarging = true
-          GROUP BY
-              company.id
+    const query = `WITH max_chargingpower AS (
+                  SELECT MAX(chargingpower) AS maxpower FROM chargingactivity
+                )
+                SELECT
+                  company.id,
+                  ARRAY_AGG(DISTINCT chargingactivity.station_id) AS chargingstations,
+                  SUM(DISTINCT chargingactivity.chargingpower) AS chargingpower
+                FROM
+                  company
+                  JOIN chargingactivity ON chargingactivity.company_id = company.id
+                  CROSS JOIN max_chargingpower
+                WHERE
+                  chargingactivity.ischarging = true
+                GROUP BY
+                  company.id
 
-          UNION
+                UNION
 
-          SELECT
-              parent_company.id,
-              ARRAY_AGG(DISTINCT chargingactivity.station_id) AS chargingstations,
-              SUM(chargingactivity.chargingpower) AS chargingpower
-          FROM
-              company AS child_company
-              JOIN chargingactivity ON chargingactivity.company_id = child_company.id
-              JOIN company AS parent_company ON parent_company.id = child_company.parent_id
-          WHERE
-              chargingactivity.ischarging = true
-          GROUP BY
-              parent_company.id;`;
+                SELECT
+                  parent_company.id,
+                  ARRAY_AGG(DISTINCT chargingactivity.station_id) AS chargingstations,
+                  SUM(chargingactivity.chargingpower) AS chargingpower
+                FROM
+                  company AS child_company
+                  JOIN chargingactivity ON chargingactivity.company_id = child_company.id
+                  JOIN company AS parent_company ON parent_company.id = child_company.parent_id
+                  CROSS JOIN max_chargingpower
+                WHERE
+                  chargingactivity.ischarging = true
+                GROUP BY
+                  parent_company.id;`;
 
     const response = await pool.query(query);
 
     const companies = response.rows.reduce((accumulator, currentCompany) => {
-      const { id, chargingstations, chargingpower } = currentCompany;
+      const { id, chargingstations } = currentCompany;
 
       if (!accumulator[id]) {
         accumulator[id] = {
           id,
           chargingstations,
-          chargingpower: parseInt(chargingpower),
+          chargingpower: 0,
         };
       } else {
         accumulator[id].chargingstations = [
@@ -97,11 +102,28 @@ export const calculateChargingStateData = async () => {
             ...chargingstations,
           ]),
         ];
-        accumulator[id].chargingpower += parseInt(chargingpower);
       }
 
       return accumulator;
     }, {});
+
+    const promises = Object.values(companies).map(async (company) => {
+      const numChargingStations = company.chargingstations.length;
+      const stationIds = company.chargingstations;
+
+      const stationMaxPowersQuery = `SELECT MAX(stationtype.maxpower) AS maxpower
+                                          FROM station
+                                          JOIN stationtype ON station.type_id = stationtype.id
+                                          WHERE station.id IN (${stationIds.join(
+                                            ","
+                                          )})`;
+      const stationMaxPowersResponse = await pool.query(stationMaxPowersQuery);
+      const stationMaxPower = stationMaxPowersResponse.rows[0].maxpower;
+
+      company.chargingpower = numChargingStations * stationMaxPower;
+    });
+
+    await Promise.all(promises);
 
     const totalChargingStations = Array.from(
       new Set(
@@ -109,13 +131,9 @@ export const calculateChargingStateData = async () => {
       )
     );
 
-    // TODO: make it dynamic,
-    // get the station maxpower for stationIds from database and calculate the totalChargingPower
     const totalChargingPower = totalChargingStations.length * 10;
 
     return {
-      // timestamp: Date.now(),
-      // timestamp: new Date() + 5 seconds,
       timestamp: new Date().getTime(),
       companies: Object.values(companies),
       totalChargingStations,
@@ -234,12 +252,9 @@ export const startChargingStationById = async (stationId) => {
 
 export const stopChargingAllStations = async () => {
   try {
-    const chargingStateQuery = `UPDATE ChargingState SET charging = FALSE;`;
+    const chargingStateQuery = `DELETE FROM ChargingState;`;
 
-    const chargingActivityQuery = {
-      text: `UPDATE chargingactivity SET isCharging = $1, endtimestamp = $2 WHERE isCharging = $3;`,
-      values: [false, new Date(), true],
-    };
+    const chargingActivityQuery = `DELETE FROM chargingactivity;`;
 
     await pool.query(chargingStateQuery);
     await pool.query(chargingActivityQuery);

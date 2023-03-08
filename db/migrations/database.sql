@@ -1,5 +1,5 @@
 -- Create the database
-CREATE DATABASE charging_station_system;
+-- CREATE DATABASE charging_station_system;
 
 -- Create Company table
 CREATE TABLE IF NOT EXISTS Company (
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS ChargingState (
   station_id INTEGER NOT NULL REFERENCES Station(id),
   -- Indicates whether the station is currently charging or not
   charging BOOLEAN NOT NULL DEFAULT FALSE,
-  CONSTRAINT chargingactivity_station_id_key UNIQUE (station_id)
+  CONSTRAINT chargingstate_station_id_key UNIQUE (station_id)
 );
 
 -- Create ChargingActivity table
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS ChargingActivity (
   endTimestamp TIMESTAMP,
   ischarging BOOLEAN NOT NULL DEFAULT FALSE,
   chargingPower INTEGER NOT NULL,
-  CONSTRAINT unq_station_id UNIQUE (station_id)
+  CONSTRAINT chargingactivity_station_id_key UNIQUE (station_id)
 );
 
 -- Insert sample data into Company table

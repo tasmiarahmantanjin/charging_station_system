@@ -9,7 +9,7 @@ Before you can run the project, you will need to have the following software ins
 1. Docker
 2. Docker Compose
 
-### Installing and running the project
+### Installing and running the project with docker
 
 ```
 git clone https://github.com/tasmiarahmantanjin/charging_station_system
@@ -19,6 +19,12 @@ touch .env
 npm install
 docker-compose up
 ```
+
+### Installing and running the project without docker
+
+1. Use the DB_HOST as localhost in server/config file
+2. Use the database and tables schemas from db/migrations file
+3. Migrate them locally
 
 ### Example env file
 
