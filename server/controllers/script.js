@@ -46,7 +46,7 @@ const script = async (req, res) => {
         timestampData[i] = new Date().getTime();
 
         if (stationId === ALL_STATIONS) {
-          const stations = await startChargingAllStations();
+          await startChargingAllStations();
 
           const chargingStateData = await calculateChargingStateData();
 
@@ -54,7 +54,7 @@ const script = async (req, res) => {
           chargingStations = chargingStateData.totalChargingStations;
           chargingPower = chargingStateData.totalChargingPower;
         } else {
-          const station = await startChargingStationById(stationId);
+          await startChargingStationById(stationId);
 
           const chargingStateData = await calculateChargingStateData();
 
@@ -69,6 +69,7 @@ const script = async (req, res) => {
 
         if (stationId === ALL_STATIONS) {
           await stopChargingAllStations();
+          companiesData = [];
           chargingStations = [];
           chargingPower = 0;
         } else {
