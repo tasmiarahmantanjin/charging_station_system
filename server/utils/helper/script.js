@@ -202,9 +202,6 @@ export const startChargingStationById = async (stationId) => {
     // Get the station and its associations
     const station = await getStationAndAssociationsByStationId(stationId);
 
-    // const query = `INSERT INTO ChargingState (station_id, charging) VALUES ($1, $2) ON CONFLICT (station_id) DO UPDATE SET charging = $2;`;
-    // const queryValues = [station.id, true];
-
     // Create the query and values to update the ChargingState table
     const chargingStateQuery = {
       text: `INSERT INTO ChargingState (station_id, charging) VALUES ($1, $2) ON CONFLICT (station_id) DO UPDATE SET charging = $2;`,
@@ -222,13 +219,7 @@ export const startChargingStationById = async (stationId) => {
         chargingpower = excluded.chargingpower, 
         ischarging = excluded.ischarging
       RETURNING *;`,
-      values: [
-        station.id,
-        station.company_id,
-        new Date(),
-        10, // TODO: get the station maxpower from the database
-        true,
-      ],
+      values: [station.id, station.company_id, new Date(), 10, true],
     };
 
     await pool.query(chargingActivityQuery);

@@ -15,8 +15,22 @@ Before you can run the project, you will need to have the following software ins
 git clone https://github.com/tasmiarahmantanjin/charging_station_system
 cd charging_station_system
 cd server
+touch .env
 npm install
 docker-compose up
+```
+
+### Example env file
+
+```
+APP_BACKEND_PORT=8000
+
+DB_USERNAME=postgres
+DB_PASSWORD=123456
+DB_NAME=charging_station_system
+# DB_HOST=localhost #if you want to run the app locally
+DB_HOST=db # if you want to run app with docker
+DB_PORT=5432
 ```
 
 This will start the following services:
